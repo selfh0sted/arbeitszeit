@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:14
+    restart: unless-stopped
+    volumes:
+      - /data/arbeitszeit/db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: arbeitszeit
+      POSTGRES_PASSWORD: arbeitszeit
+    ports:
+      - "5432:5432"
+  backend:
+    image: ghcr.io/danielr1996/arbeitszeit-backend:latest
+    restart: unless-stopped
+    depends_on:
+      - db
+    labels:
+      traefik.enable: true
+      traefik.http.routers.arbeitszeit-backend.rule: Host(`api.arbeitszeit.local.app.danielr1996.de`)
+      traefik.http.routers.arbeitszeit-backend.tls.certresolver: letsencrypt
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: arbeitszeit
+      DB_PASSWORD: arbeitszeit
+      DB_NAME: arbeitszeit
+      JWKS_URL: https://sso.local.app.danielr1996.de/realms/arbeitszeit/protocol/openid-connect/certs
+  frontend:
+    image: ghcr.io/danielr1996/arbeitszeit-frontend:latest
+    restart: unless-stopped
+    labels:
+      traefik.enable: true
+      traefik.http.routers.arbeitszeit-frontend.rule: Host(`arbeitszeit.local.app.danielr1996.de`)
+      traefik.http.routers.arbeitszeit-frontend.tls.certresolver: letsencrypt
+      de.danielr1996.bashdoard.name: Arbeitszeit
+      de.danielr1996.bashdoard.url: https://arbeitszeit.local.app.danielr1996.de
+      de.danielr1996.bashdoard.icon: /favicon.ico
+      de.danielr1996.bashdoard.id: arbeitszeit
+    environment:
+      APP_API: https://api.arbeitszeit.local.app.danielr1996.de
+      APP_OAUTH_URL: https://sso.local.app.danielr1996.de/realms/arbeitszeit
+      APP_OAUTH_CLIENT_ID: arbeitszeit-frontend
